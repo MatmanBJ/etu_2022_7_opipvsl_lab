@@ -1,0 +1,5 @@
+# macOS system files for custom folder attributes
+._.DS_Store
+.DS_Store
+# macOS system file for custom file attributes
+._*
