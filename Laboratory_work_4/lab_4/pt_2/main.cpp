@@ -42,9 +42,9 @@ int main(int argc, char *argv[])
 	main_arguments_1.write_file = &output_file_1; // for struct
 	main_arguments_2.write_file = &output_file_2; // for struct
 	
-	isFileOpenMyFunc (&input_file, "/home/matmanbj/out0.txt"); // check opening file to read
-	isFileOpenMyFunc (&output_file_1, "out1.txt"); // check opening file to write 1
-	isFileOpenMyFunc (&output_file_2, "out2.txt"); // check opening file to write 2
+	isFileOpenMyFunc (&input_file, "/home/matmanbj/lorem_ipsum_2.txt"); // check opening file to read
+	isFileOpenMyFunc (&output_file_1, "output_file_1.txt"); // check opening file to write 1
+	isFileOpenMyFunc (&output_file_2, "output_file_2.txt"); // check opening file to write 2
 	
 	cout << "---------- READ & WRITE BEGINS ----------\n";
 	
