@@ -30,3 +30,5 @@ https://stackoverflow.com/questions/49222622/stdifstream-use-of-deleted-function
 
 https://purecodecpp.com/archives/2751
 https://purecodecpp.com/archives/2874
+
+https://stackoverflow.com/questions/49222622/stdifstream-use-of-deleted-function
