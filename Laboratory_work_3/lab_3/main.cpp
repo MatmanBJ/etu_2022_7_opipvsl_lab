@@ -94,8 +94,11 @@ int main()
 			<< "[real] Group ID (GID): " << getgid() << "\n"
 			<< "Effective group ID (EGID): " << getegid() << "\n";
 			file_stream.close();
-			waitpid(pid_1, &pid_1_status, 0); // child_1 waiting f/ correct ending
-			waitpid(pid_2, &pid_2_status, 0); // child_2 waiting f/ correct ending
+			// if use "waitpid", parent process wait for end of each
+			// if don't use "waitpid", parent process dies, child process becames orphan
+			// and it gets other pid
+			//waitpid(pid_1, &pid_1_status, 0); // child_1 waiting f/ correct ending
+			//waitpid(pid_2, &pid_2_status, 0); // child_2 waiting f/ correct ending
 		}
 	}
 	
