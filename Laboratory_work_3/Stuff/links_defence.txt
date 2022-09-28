@@ -1,0 +1,4 @@
+https://stackoverflow.com/questions/36220540/process-parent-id-of-child-process-is-different-from-pid-of-parent
+https://stackoverflow.com/questions/4862012/if-i-have-a-process-and-i-clone-it-is-the-pid-the-same
+https://pubs.opengroup.org/onlinepubs/9699919799/functions/_exit.html
+https://www.opennet.ru/man.shtml?topic=waitpid&category=2&russian=0
