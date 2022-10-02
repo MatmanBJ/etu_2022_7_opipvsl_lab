@@ -1,3 +1,16 @@
+// start program
+// ./main (signal | sigaction | <none=default>) (1 | 2 | <none=default>)
+// ----------
+// 1st
+// signal -- signal function usage
+// sigaction -- sigaction function usage
+// <none=default> -- default (signal) function usage
+// ----------
+// 2nd
+// 1 -- dividing by zero operation usage
+// 2 -- adressing to nullptr operation usage
+// <none=default> -- default (dividing by zero) operation usage
+
 #include <signal.h>
 #include <unistd.h>
 #include <iostream>
@@ -5,42 +18,39 @@
 
 using namespace std;
 
-void InvalidOperationError (int);
-void MemoryProtectionError (int);
+void ErrorHandler (int local);
 
 int main (int argc, char *argv[])
 {
 	string type_func = argv[1];
 	int type_err = atoi(argv[2]);
-	//структура для фунции перехвата sigaction
-	struct sigaction for_sigfpe;
-	struct sigaction for_sigsegv;
 	
-	//устанавливаем флаг игнорирования дополнительной сигнальной маски
-	//и флаг сброса реакции после первого перехвата
-
-	for_sigfpe.sa_flags = SA_NOMASK || SA_ONESHOT;
-	for_sigsegv.sa_flags = SA_NOMASK || SA_ONESHOT;
+	// https://man7.org/linux/man-pages/man2/sigaction.2.html
+	struct sigaction sig; // struct for handling sigaction
 	
-	//задаём функцию обработки сигнала для функции перехвата sigaction
-
-	for_sigfpe.sa_handler = &InvalidOperationError;
-	for_sigsegv.sa_handler = &MemoryProtectionError;
+	sig.sa_handler = &ErrorHandler; // error (sigaction) handle function set
 	
+	// https://www.ibm.com/docs/en/zos/2.1.0?topic=functions-sigaction-examine-change-signal-action
+	// http://fkn.ktu10.com/?q=node/666
+	// no flags added, because "the... ...mask with signal stays in effect
+	// until the signal handler returns, or..."
+	
+	// https://stackoverflow.com/questions/45477254/how-sigaction-differs-from-signal
+	// https://stackoverflow.com/questions/231912/what-is-the-difference-between-sigaction-and-signal
 	if (type_func == "signal") // signal
 	{
-		signal(SIGFPE, InvalidOperationError); // SIGFPE = 8, invalid operation (overflow, dividing by 0)
-		signal(SIGSEGV, MemoryProtectionError); // SIGSEGV = 11, memory protection breach
+		signal(SIGFPE, ErrorHandler); // SIGFPE = 8, invalid operation (overflow, dividing by 0)
+		signal(SIGSEGV, ErrorHandler); // SIGSEGV = 11, memory protection breach
 	}
 	else if (type_func == "sigaction") // sigaction
 	{
-		sigaction(SIGFPE, &for_sigfpe, NULL); // SIGFPE = 8, invalid operation (overflow, dividing by 0)
-		sigaction(SIGSEGV, &for_sigsegv, NULL); // SIGSEGV = 11, memory protection breach
+		sigaction(SIGFPE, &sig, NULL); // SIGFPE = 8, invalid operation (overflow, dividing by 0)
+		sigaction(SIGSEGV, &sig, NULL); // SIGSEGV = 11, memory protection breach
 	}
 	else // signal by default
 	{
-		signal(SIGFPE, InvalidOperationError); // SIGFPE = 8, invalid operation (overflow, dividing by 0)
-		signal(SIGSEGV, MemoryProtectionError); // SIGSEGV = 11, memory protection breach
+		signal(SIGFPE, ErrorHandler); // SIGFPE = 8, invalid operation (overflow, dividing by 0)
+		signal(SIGSEGV, ErrorHandler); // SIGSEGV = 11, memory protection breach
 	}
 	
 	switch(type_err)
@@ -59,18 +69,36 @@ int main (int argc, char *argv[])
 			*c = 'z';
 			break;
 		}
+		default: // dividing by zero by default
+		{
+			int number = 1;
+			int zero = 0;
+			int res = 0;
+			res = number/zero;
+			break;
+		}
 	}
 	return 0;
 }
 
-void InvalidOperationError (int) // dividing by zero, SIGFPE function
+void ErrorHandler (int local)
 {
-	puts("Invalid operation (overflow, dividing by 0): dividing by zero!");
-	exit(1);
-}
-
-void MemoryProtectionError (int) // memory protection breach, SIGSEGV function
-{
-	puts("Memory protection breach: trying to adress to nullptr pointer!");
-	exit(2);
+	switch(local)
+	{
+		case SIGFPE: // dividing by zero, SIGFPE function
+		{
+			puts("Invalid operation (overflow, dividing by 0): dividing by zero!");
+			exit(1);
+		}
+		case SIGSEGV: // memory protection breach, SIGSEGV function
+		{
+			puts("Memory protection breach: trying to adress to nullptr pointer!");
+			exit(2);
+		}
+		default: // unable to recognize signal
+		{
+			puts("Unable to recognize signal!");
+			exit(3);
+		}
+	}
 }
