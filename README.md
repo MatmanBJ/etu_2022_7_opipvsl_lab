@@ -14,11 +14,11 @@
 `./main (signal | sigaction | <other=default>) (1 | 2 | <other=default>)`, где:
 - в части **./main**:
   - `./main` -- название программы (испольняемого файла);
-- в части **(signal | sigaction | <none=default>)**:
+- в части **(signal | sigaction | <other=default>)**:
   - `signal` -- использование функции `signal`;
   - `sigaction` -- использование функции `sigaction`;
   - `<other=default>` -- использование дефолтной функции (`signal`);
-- в части **(1 | 2 | <none=default>)**:
+- в части **(1 | 2 | <other=default>)**:
   - `1` -- деление на 0 в качестве ошибки;
   - `2` -- обращение по **nullptr** адресу в качестве ошибки;
   - `<other=default>` -- дефолтная операция (деление на 0) в качестве ошибки.
