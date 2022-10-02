@@ -1,0 +1,5 @@
+https://man7.org/linux/man-pages/man2/sigaction.2.html
+https://www.ibm.com/docs/en/zos/2.1.0?topic=functions-sigaction-examine-change-signal-action
+http://fkn.ktu10.com/?q=node/666
+https://stackoverflow.com/questions/45477254/how-sigaction-differs-from-signal
+https://stackoverflow.com/questions/231912/what-is-the-difference-between-sigaction-and-signal
