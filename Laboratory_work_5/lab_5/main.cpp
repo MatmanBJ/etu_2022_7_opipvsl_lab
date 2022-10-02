@@ -1,15 +1,15 @@
 // start program
-// ./main (signal | sigaction | <none=default>) (1 | 2 | <none=default>)
+// ./main (signal | sigaction | <other=default>) (1 | 2 | <other=default>)
 // ----------
 // 1st
 // signal -- signal function usage
 // sigaction -- sigaction function usage
-// <none=default> -- default (signal) function usage
+// <other=default> -- default (signal) function usage
 // ----------
 // 2nd
 // 1 -- dividing by zero operation usage
 // 2 -- adressing to nullptr operation usage
-// <none=default> -- default (dividing by zero) operation usage
+// <other=default> -- default (dividing by zero) operation usage
 
 #include <signal.h>
 #include <unistd.h>
