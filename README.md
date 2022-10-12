@@ -13,7 +13,7 @@
 Программу необходимо запускать со следующими флагами:\
 `./main (signal | sigaction | <other=default>) (1 | 2 | <other=default>)`, где:
 - в части **./main**:
-  - `./main` -- название программы (испольняемого файла);
+  - `./main` -- название программы (исполняемого файла);
 - в части **(signal | sigaction | <other=default>)**:
   - `signal` -- использование функции `signal`;
   - `sigaction` -- использование функции `sigaction`;
@@ -24,6 +24,24 @@
   - `<other=default>` -- дефолтная операция (деление на 0) в качестве ошибки.
 
 Например, `./main signal 1` будет означать, что будет использоваться функция `signal` и что будет производиться деление на 0.
+
+### Используемый на Linux компилятор
+
+```
+matmanbj@matmanbj-VirtualBox:~$ gcc --version
+gcc (Ubuntu 9.4.0-1ubuntu1~20.04.1) 9.4.0
+Copyright (C) 2019 Free Software Foundation, Inc.
+This is free software; see the source for copying conditions.  There is NO
+warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+```
+
+```
+matmanbj@matmanbj-VirtualBox:~$ g++ --version
+g++ (Ubuntu 9.4.0-1ubuntu1~20.04.1) 9.4.0
+Copyright (C) 2019 Free Software Foundation, Inc.
+This is free software; see the source for copying conditions.  There is NO
+warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+```
 
 # Лицензия
 
