@@ -26,7 +26,7 @@ int main(int argc, char *argv[])
 	number_period = atoi(argv[1]); // convert input data to numeric
 	number_launch = atoi(argv[2]); // convert input data to numeric
 
-	start_time = (float)clock() / CLOCKS_PER_SEC; // measuring the current time
+	//start_time = (float)clock() / CLOCKS_PER_SEC; // measuring the current time
 
 	sigact.sa_handler = processFunction; // setting handling function
 	sigemptyset(&sigact.sa_mask); // cleaning "set" from all signals
@@ -44,10 +44,11 @@ int main(int argc, char *argv[])
 	value.it_interval.tv_sec = number_period; // interval s, launch period
 	value.it_interval.tv_usec = 0; // interval us, launch period
 	
-	setitimer(ITIMER_REAL, &value, &old_value); // ITIMER_REAL means always, 
+	setitimer(ITIMER_REAL, &value, &old_value); // ITIMER_REAL means always
 	
 	for (int i = 0; i < number_launch; i++)
 	{
+		start_time = (float)clock() / CLOCKS_PER_SEC; // measuring the current time
 		pause(); // SIGALRM signal waiting
 		cout << "Parent process' work time (seconds): " << finalTime(start_time) << "\n\n";
 	}
@@ -58,6 +59,7 @@ int main(int argc, char *argv[])
 void processFunction (int local_int) // function for repeat
 {
 	int local_status; // status for "waitpid" func
+	float local_start_time; // initilaizing
 	pid_t local_pid = fork(); // creating child process
 
 	if (local_pid == 0) // if child is created
@@ -65,7 +67,7 @@ void processFunction (int local_int) // function for repeat
 		time_t local_seconds = time (NULL); // seconds since
 		sigset_t local_set; // signal set
 		struct tm* local_time = localtime (&local_seconds); // time date
-		float local_start_time = (float)clock() / CLOCKS_PER_SEC; // initilaizing & counting current time since starting program
+		local_start_time = (float)clock() / CLOCKS_PER_SEC; // counting current time since starting program
 		
 		sigemptyset(&local_set); // setting emty signal set
 		
@@ -75,13 +77,14 @@ void processFunction (int local_int) // function for repeat
 		sigaddset(&local_set, SIGTSTP); // adding signal SIGTSTP (anti ctrl-z) to the current process
 		sigprocmask(SIG_BLOCK, &local_set, NULL); // adding blocked signals to the set, SIG_BLOCK means blocked signals are current set + set argument in function
 		
-		cout << "Child process' work time (seconds): " << finalTime(local_start_time) << "\n"; // cou
+		//cout << "Child process' work time (seconds): " << finalTime(local_start_time) << "\n"; // cout child process time
 		
 		exit(EXIT_SUCCESS);
 	}
 	else // else if it is not child or child is not created
 	{
 		waitpid(local_pid, &local_status, 0); // wait until child is terminate its work
+		cout << "Child process' work time (seconds): " << finalTime(local_start_time) << "\n"; // cout child process time
 	}
 }
 
