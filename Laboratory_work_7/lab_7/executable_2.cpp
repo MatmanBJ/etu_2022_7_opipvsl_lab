@@ -39,7 +39,8 @@ int main(int argc, char *argv[])
 	sigwait(&set, &sig); // child process 2 waits child process 1 (1st waiting before reading)
 	
 	//pipe_read_is_done = read(fildes[0], &ch, 1); // reading from pipe
-	while ((pipe_read_is_done = read(fildes[0], &ch, 1)) > 0 || pipe_write_is_finished == false) // while pipe writing by parent process is not finished & pipe not done
+	// pipe finish condition is in priority -- if pipe writing is not finished, this program MUST wait
+	while (pipe_write_is_finished == false || (pipe_read_is_done = read(fildes[0], &ch, 1)) > 0) // while pipe writing by parent process is not finished & pipe not done
 	{
 		if (pipe_read_is_done > 0) // additional check pipe if is done (if previous while there was ||, not &&)
 		{
