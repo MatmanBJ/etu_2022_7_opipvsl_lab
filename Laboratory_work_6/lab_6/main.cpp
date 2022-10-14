@@ -1,3 +1,8 @@
+// start program
+// ./main <launch period> <number of launches>
+// <launch period> -- launch period in seconds (time between every launch)
+// <number of launches> -- number of program launches (how many times program will launch)
+
 #include <iostream>
 #include <signal.h>
 #include <sys/wait.h>
