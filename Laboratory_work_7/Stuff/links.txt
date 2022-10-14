@@ -1,0 +1,14 @@
+https://www.digitalocean.com/community/tutorials/exit-function-c-plus-plus
+http://www.c-cpp.ru/content/write-rtlwrite
+http://www.c-cpp.ru/content/fgets
+http://all-ht.ru/inf/prog/c/func/feof.html
+http://all-ht.ru/inf/prog/c/func/fopen.html
+https://www.gnu.org/software/libc/manual/html_node/Signal-Sets.html
+https://habr.com/ru/post/122823/
+https://ru.wikipedia.org/wiki/SIGUSR1_%D0%B8_SIGUSR2
+https://www.opennet.ru/cgi-bin/opennet/man.cgi?topic=sigaction&category=2
+https://www.opennet.ru/man.shtml?topic=pipe2&category=2&russian=2
+https://pubs.opengroup.org/onlinepubs/7908799/xsh/fcntl.h.html
+https://ru.stackoverflow.com/questions/459650/%D0%9F%D0%B5%D1%80%D0%B5%D0%B2%D0%BE%D0%B4-%D1%81%D1%82%D1%80%D0%BE%D0%BA%D0%B8-%D0%B2-windows-%D0%B8-linux
+https://stackoverflow.com/questions/7013034/does-windows-carriage-return-r-n-consist-of-two-characters-or-one-character
+https://developer.mozilla.org/en-US/docs/Glossary/CRLF
