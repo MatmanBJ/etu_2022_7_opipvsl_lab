@@ -1,3 +1,7 @@
+// WARNING: create file in Linux to have "\n" ending (LF) instead of "\r\n" (CRLF) in Windows file
+// LF -- line feed ("\n")
+// CRLF -- carriage return line feed ("\r\n")
+
 #include <iostream>
 #include <fstream>
 #include <unistd.h>

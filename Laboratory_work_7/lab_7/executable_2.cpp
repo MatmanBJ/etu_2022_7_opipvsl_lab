@@ -1,3 +1,7 @@
+// WARNING: create file in Linux to have "\n" ending (LF) instead of "\r\n" (CRLF) in Windows file
+// LF -- line feed ("\n")
+// CRLF -- carriage return line feed ("\r\n")
+
 #include <iostream>
 #include <fstream>
 #include <unistd.h>
@@ -9,7 +13,7 @@ void LocalHandler (int local_int);
 
 int main(int argc, char *argv[])
 {
-	FILE* output_file_2 = fopen(argv[3],"w"); // file opening w/ write flag
+	FILE* output_file_2 = fopen(argv[3], "w"); // file opening w/ write flag
 	int sig; // for sigwait
 	int fildes[2]; // pipe channels handles, fildes[0] -- read from pipe, fildes[1] -- write to pipe
 	char ch; // char buffer
