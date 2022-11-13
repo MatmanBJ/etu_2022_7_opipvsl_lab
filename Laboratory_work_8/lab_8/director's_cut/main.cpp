@@ -234,7 +234,14 @@ int main(int argc, char *argv[])
 		 * msgtyp = 0: 1st message
 		 * msgtyp > 0: 1st mesage with msgtyp type
 		 * msgtyp < 0: 1st message with type < msgtyp
-		 * IPC_NOWAIT: bloc calling process till:
+		 * IPC_NOWAIT:
+		 * as i understand it, it is needed in order not to block calling process,
+		 * while it's waiting for a message in the queue,
+		 * i mean it's for just like checking for message appearence in the queue,
+		 * then receiving / not receiving a response and continuing the program
+		 * (and not block curret process for waiting the message)
+		 * if there is no IPC_NOWAIT:
+		 * block calling process till:
 		 * 1 -- queue got message with type, that program need
 		 * 2 -- queue deleted
 		 * 3 -- calling process got sygnal
