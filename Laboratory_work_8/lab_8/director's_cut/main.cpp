@@ -1,9 +1,12 @@
 // start program
-// ./main -num (1 | 2 | 3) -file <filename.txt>
+// ./main -num (1 | 2 | 3) -file <filename.txt> -key (<key_integer number >= 0>)
 // flag "-num" -- number of program id, it can be only 1, 2 or 3
 // flag "-file" -- filename with .txt extension, e.g. filename.txt
 // .txt extension is not required by program, only some name,
 // but the porgram will read txt files, not the other ones
+// flag "-key" -- key number for common queue
+// it may be integer number from 0 (= IPC_PRIVATE) to infinity
+// but if you have 0 = IPC_PRIVATE, your program won't work
 
 #include <iostream>
 #include <fstream>
@@ -49,6 +52,7 @@ int main(int argc, char *argv[])
 	int other_second_program_id = 0; // other program id
 	int program_id = 0; // this program id
 	int message_number = 0; // array number of recieved message
+	key_t key = 0;
 	
 	MessageResponse message_response; // message responce to send to other programs
 	MessageRequest message_request_receive[2]; // message request to receiving from other programs
@@ -87,14 +91,52 @@ int main(int argc, char *argv[])
 		}
 	}
 	
+	if (strcmp(argv[5], string("-key").c_str()) != 0) // clutch!!!
+	{
+		cout << "Couldn't find \"-key\" flag. Program terminating!\n";
+		exit(-1);
+	}
+	else
+	{
+		if (atoi(argv[6]) < 0)
+		{
+			cout << "\"-key\" parameter doesn't > 0 or doesn't = 0 (IPC_PRIVATE). Program terminating!\n";
+			exit(-1);
+		}
+		else if (atoi(argv[6]) == 0)
+		{
+			key = IPC_PRIVATE;
+		}
+		else if (atoi(argv[6]) > 0)
+		{
+			key = atoi(argv[6]);
+		}
+	}
+	
 	program_id = atoi(argv[2]);
 	cout << "---------- PROGRAM NUMBER " << program_id << " ----------\n";
+	cout << "---------- FILENAME IS " << argv[4] << " ----------\n";
+	// https://stackoverflow.com/questions/10847237/how-to-convert-from-int-to-char
+	cout << "---------- KEY IS " << (key == IPC_PRIVATE ? "IPC_PRIVATE = " + to_string(key) : to_string(key)) << " ----------\n";
 	
 	// ---------- CREATING/OPENING COMMON QUEUE ----------
 	
 	// IPC_CREAT -- if there wasn't queue, it will be created
 	// O_EXCL + IPC_CREAT -- if there was queue, msgget will return error
-	common_queue = msgget(200, 0606 | IPC_CREAT | IPC_EXCL); // trying to create common queue
+	common_queue = msgget(key, 0606 | IPC_CREAT | IPC_EXCL); // trying to create common queue
+	// 190 -- key for identification, 0606 -- r&w for owner and others
+	
+	/*
+	https://www.opennet.ru/docs/RUS/linux_base/node214.html
+	0400 | 0200 | 0004 | 0002 = 0606
+	0400 -- reading queue for owner
+	0200 -- writing queue for owner
+	0004 -- reading queue for others
+	0606 -- writing queue for others
+	key number (1st parameter) -- key for seacrh queue, >= 0
+	key = 0 = IPC_PRIVATE or key > 0
+	if there is IPC_PRIVATE, no one will read this, program won't be ended
+	*/
 	
 	// checking if common queue has been created
 	if (common_queue != -1) // if we created common queue, write message
@@ -126,7 +168,12 @@ int main(int argc, char *argv[])
 		cout << "---------- LOCAL QUEUE HAS NOT BEEN CREATED ----------\n\n";
 		if (common_queue_owner == true) // deleting local queue if there is remaining object
 		{
+			// if we are owner of the common queue, delete it (IPC_RMID means delete queue, alarm all processes & throw an error)
 			msgctl(common_queue, IPC_RMID, NULL);
+			
+			/*
+			 * https://www.opennet.ru/man.shtml?topic=msgctl&category=2&russian=0
+			 */
 		}
 		exit(-1); // terminate program
 	}
@@ -180,6 +227,18 @@ int main(int argc, char *argv[])
 			cout << "Ability to read has been got from: " << message_response.sender_id << "\n";
 			cout << "Ability to read has been send at: " << ctime(&message_response.response_time) << "\n";
 		}
+		
+		/*
+		 * https://www.opennet.ru/man.shtml?topic=msgrcv&category=2&russian=0
+		 * ssize_t msgrcv(int msqid, struct msgbuf *msgp, size_t msgsz, long msgtyp, int msgflg);
+		 * msgtyp = 0: 1st message
+		 * msgtyp > 0: 1st mesage with msgtyp type
+		 * msgtyp < 0: 1st message with type < msgtyp
+		 * IPC_NOWAIT: bloc calling process till:
+		 * 1 -- queue got message with type, that program need
+		 * 2 -- queue deleted
+		 * 3 -- calling process got sygnal
+		 */
 	}
 	
 	// ---------- OPENING AND READING THE FILE ----------
@@ -251,7 +310,21 @@ void sendingRequest (MessageRequest *local_buffer, int local_other_program_id, i
 	local_buffer[local_other_program_id].request_time = time(NULL);
 	local_buffer[local_other_program_id].local_queue_id = local_local_queue;
 	local_buffer[local_other_program_id].sender_id = local_program_id;
+	// (common queue, message, message real size, flags)
 	msgsnd(local_common_queue, &local_buffer[local_other_program_id], sizeof(local_buffer[local_other_program_id]), 0);
 	cout << "Request to read has been send to: " << local_buffer[local_other_program_id].receiver_id << "\n";
 	cout << "Request to read has been send at: " << ctime(&local_buffer[local_other_program_id].request_time) << "\n";
+	
+	/*
+	 * https://www.opennet.ru/man.shtml?topic=msgsnd&category=2&russian=0
+	 * int msgsnd(int msqid, struct msgbuf *msgp, size_t msgsz, int msgflg);
+	 * 1st paramerer is common queue
+	 * 2nd parameter is message
+	 * 3rd parameter is size of message,
+	 *   if we have flag MSG_NOERROR and real size of stuct is bigger, than size in this parameter,
+	 *   the message will be cut to size, that you wrote in this parameter,
+	 *   else if we HAVEN'T flag MSG_NOERROR, there will be an error,
+	 *   that's why we have real size here
+	 * 4th parameter is flags, we haven't any of them
+	 */
 }
