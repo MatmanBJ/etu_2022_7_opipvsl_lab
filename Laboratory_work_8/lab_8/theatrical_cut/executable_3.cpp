@@ -69,7 +69,7 @@ int main(int argc, char *argv[])
 	}
 	else // if we hasn't been created common queue, try to open, write message
 	{
-		common_queue = msgget(200, IPC_CREAT); // trying to open common queue
+		common_queue = msgget(190, IPC_CREAT); // trying to open common queue
 		if (common_queue == -1) // if we couldn't open, write message & terminate program
 		{
 			cout << "---------- COMMON QUEUE HAS NOT BEEN OPENED ----------\n";
