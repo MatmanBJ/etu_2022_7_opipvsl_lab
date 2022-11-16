@@ -54,7 +54,48 @@
 
 ### Лабораторная работа 8
 
+#### Теория
+
+Зачем нужны функции `msgrcv` и `msgsnd`:
+
+- `msgrcv` -- получить сообщение;
+- `msgsnd` -- отправить сообщение.
+
+Зачем нужны структуры `MessageRequest` и `MessageResponse`, а также их объекты в программе:
+
+- `MessageRequest` — для посылки/принятия в общей очереди и для хранения всяких данных;
+  - `MessageRequest message_request_receive[2]` — для хранения полученных запросов на чтение от других программ (то есть необработанных запросов), сделано 2 ячейки для двух других программ, от которых я принимаю запрос;
+  - `MessageRequest message_request_send[4]` — для хранения отправленных запросов на чтение для других программ и для их отправки, сделано 4 ячейки для соответствия 1, 2 и 3 программ (одна из них не понадобится), а 0-я ячейка нужна для проверки завершения очереди;
+  - `MessageRequest message_request` — для посылки запроса об окончании работы общей очереди;
+- `MessageResponse` — для посылки/принятия в локальной очереди;
+  - `MessageResponse message_response` — для отправки разрешения другим программам и для получения разрешения от других программ.
+
+Пример 1:
+```
+msgsnd(message_request_receive[message_number].local_queue_id, &message_response, sizeof(message_response), 0)
+```
+В этой строке, оперирующей локальной очередью, есть `message_request_receive` типа `MessageRequest`,
+но он служит для извлечения нужной нам локальной очереди
+(чтобы разрешение отправить не в общую очередь, где все её могут прочитать, а в локальную, чтобы только эта программа могла её увидеть),
+а `&message_response` типа `MessageResponse` служит уже для непосредственной отправки.
+
+Пример 2:
+```
+msgrcv(common_queue, &message_request_receive[message_number], sizeof(message_request_receive[message_number]), program_id, IPC_NOWAIT) != -1
+```
+В этой строке, оперирующей общей очередью, идёт принятие из общей очереди,
+и вторым параметром стоит уже `&message_request_receive[message_number]` типа `MessageRequest`.
+
+Пример 3:
+```
+(msgrcv(local_queue, &message_response, sizeof(message_response), 0, IPC_NOWAIT) != -1)
+```
+В этой строке, оперирующей локальной очередью, `&message_response` типа `MessageResponse` служит для принятия, а не для отправки.
+
 #### Director's cut (режиссёрская версия)
+
+`Режиссёрская версия` — версия программы, созданная для работы,
+которая содержит возможность менять значения `номера программы`, читаемого `файла` и `ключа` общей очереди и которая содержит ссылки и дополнительную информацию по коду и теме.
 
 Компиляция программы стандартная.\
 Запуск программы происходит в **трёх терминалах параллельно** со следующими параметрами:
@@ -81,6 +122,9 @@
 
 #### Theatrical cut (театральная версия)
 
+`Театральная версия` — версия программы, соданная для демонстрации,
+которая уже содержит конкретные значения `номера программы`, читаемого `файла` и `ключа` общей очереди.
+
 Компиляция программы стандартная.\
 Запуск программ происходит в **трёх терминалах параллельно** без параметров:
 
@@ -95,6 +139,8 @@
 ./executable_2
 ./executable_3
 ```
+
+## Дополнительная информация
 
 ### Используемый на Linux компилятор
 
@@ -113,6 +159,65 @@ Copyright (C) 2019 Free Software Foundation, Inc.
 This is free software; see the source for copying conditions.  There is NO
 warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 ```
+
+### Версия Linux в файле `/etc/os-release`
+
+```
+matmanbj@matmanbj-VirtualBox:~$ cat /etc/os-release
+NAME="Ubuntu"
+VERSION="20.04.5 LTS (Focal Fossa)"
+ID=ubuntu
+ID_LIKE=debian
+PRETTY_NAME="Ubuntu 20.04.5 LTS"
+VERSION_ID="20.04"
+HOME_URL="https://www.ubuntu.com/"
+SUPPORT_URL="https://help.ubuntu.com/"
+BUG_REPORT_URL="https://bugs.launchpad.net/ubuntu/"
+PRIVACY_POLICY_URL="https://www.ubuntu.com/legal/terms-and-policies/privacy-policy"
+VERSION_CODENAME=focal
+UBUNTU_CODENAME=focal
+```
+
+Взято [отсюда](https://www.cyberciti.biz/faq/how-to-check-os-version-in-linux-command-line/).
+
+### Использование команды `lsb_release`
+
+```
+matmanbj@matmanbj-VirtualBox:~$ lsb_release -a
+No LSB modules are available.
+Distributor ID:	Ubuntu
+Description:	Ubuntu 20.04.5 LTS
+Release:	20.04
+Codename:	focal
+```
+
+Взято [отсюда](https://www.cyberciti.biz/faq/how-to-check-os-version-in-linux-command-line/).
+
+### Использование команды `hostnamectl`
+
+```
+matmanbj@matmanbj-VirtualBox:~$ hostnamectl
+   Static hostname: matmanbj-VirtualBox
+         Icon name: computer-vm
+           Chassis: vm
+        Machine ID: e5c748f0a6434a2489252bb8c130fcbf
+           Boot ID: 189c7cbf53c343488f885a2dc9e7a427
+    Virtualization: oracle
+  Operating System: Ubuntu 20.04.5 LTS
+            Kernel: Linux 5.15.0-50-generic
+      Architecture: x86-64
+```
+
+Взято [отсюда](https://www.cyberciti.biz/faq/how-to-check-os-version-in-linux-command-line/).
+
+### Использование команды `uname` с флагом `-r`
+
+```
+matmanbj@matmanbj-VirtualBox:~$ uname -r
+5.15.0-50-generic
+```
+
+Взято [отсюда](https://www.cyberciti.biz/faq/how-to-check-os-version-in-linux-command-line/).
 
 # Лицензия
 
