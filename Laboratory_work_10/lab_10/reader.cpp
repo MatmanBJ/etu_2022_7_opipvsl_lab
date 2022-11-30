@@ -41,9 +41,9 @@ int main (int argc, char* argv[])
 	char local_buffer[80]; // buffer to read the file
 	string filename = "shared_file.txt"; // name of the file to read strings
 	ifstream local_file;
-	SemaphoreBuffer ZeroNumOfWriters = {1, 0, 0}; // comparing ACTIVE WRITERS semaphore with 0
-	SemaphoreBuffer DecNumOfReaders={2, -1, 1}; // DEcreasing ACTIVE READERS semaphore
-	SemaphoreBuffer IncNumOfReaders={2, 1, 1}; // INcreasing ACTIVE READERS semaphore
+	SemaphoreBuffer ZeroNumOfWriters = {1, 0, 0}; // comparing ACTIVE WRITERS semaphore with 0 (flags = 0)
+	SemaphoreBuffer DecNumOfReaders={2, -1, 0}; // DEcreasing ACTIVE READERS semaphore (flags = 0)
+	SemaphoreBuffer IncNumOfReaders={2, 1, 0}; // INcreasing ACTIVE READERS semaphore (flags = 0)
 	SharedMemorySegmentBuffer* shared_mem_seg_this_process;
 	
 	// ---------- CREATING/OPENING SHARED MEMORY SEGMENT ----------
@@ -114,7 +114,10 @@ int main (int argc, char* argv[])
 	
 	// ---------- READING FILE ----------
 	
-	cout << "---------- R/ PROCESS №" << getpid() << " IS WAITING FOR THE W/ PROCESSES TO FINISH ----------\n";
+	// if there is NO writers, who are ready to write, readers could access file together
+	// if there IS writers, who are ready to write, other readers will wait access to the file
+	
+	cout << "---------- R/ PROCESS №" << getpid() << " IS WAITING FOR THE READY W/ PROCS ----------\n";
 	semop(semaphore_ptr, &ZeroNumOfWriters, 1); // reader waits until writer will finish the reading
 	
 	semop(semaphore_ptr, &IncNumOfReaders, 1);// +1 writer process, who wants to read from the file

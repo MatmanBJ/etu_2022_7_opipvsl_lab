@@ -1,8 +1,10 @@
 /*
- * ./writer number_of_strings
+ * ./writer number_of_strings interval_time
  *
  * number_of_strings
  *     Number of loops (cycles), i.e. how many times this (WRITER) program (process) will write strings in the file. Integer number in the range [0; +inf].
+ * interval_time
+ *     Interval time (as argument for "sleep()" function) for every loop (cycle), i.e. how many time we will wait after each iteration. Integer number in the range [-1; +inf].
  *
  */
 
@@ -32,8 +34,8 @@ struct sembuf
  * sem_op > 0: add sem_op
  * sem_op < 0: decrease by |sem_op|, if there will be number < 0 after that, it will return an error
  * sem_op == 0: compare to 0, if != 0, there will be an error
- * sem_flg == IPC_NOWAIT: if some operation couldn't be finished, there will be an error, nothing will be changed
- * sem_flg == SEM_UNDO: test operation regime, even if it's successful or not, it will be reseted (undo) to values before
+ * sem_flg == IPC_NOWAIT == 2048: if some operation couldn't be finished, there will be an error, nothing will be changed
+ * sem_flg == SEM_UNDO == 4096: test operation regime, even if it's successful or not, it will be reseted (undo) to values before
  */
 
 /*
@@ -56,9 +58,27 @@ int main (int argc, char* argv[])
 {
 	// ---------- INITIALIZING & PREPARING ----------
 	
+	// checking if there is wrong/incopatible arguments
+	if (argv[1] == nullptr)
+	{
+		cout << "Syntax error. No number of strings argument has found!\n";
+		exit(-1);
+	}
 	if (atoi(argv[1]) < 0)
 	{
-		cout << "Syntax error. Number of strings to write file argument must be in range [0; +inf)!";
+		cout << "Syntax error. Number of strings to write file argument must be in range [0; +inf)!\n";
+		exit(-1);
+	}
+	
+	// checking if there is wrong/incopatible arguments
+	if (argv[2] == nullptr)
+	{
+		cout << "Syntax error. No interval time (for \"sleep()\" function) argument has found!\n";
+		exit(-1);
+	}
+	if (atoi(argv[2]) < -1)
+	{
+		cout << "Syntax error. Interval time (for \"sleep()\" function) argument must be in range [-1; +inf)!\n";
 		exit(-1);
 	}
 	
@@ -69,6 +89,8 @@ int main (int argc, char* argv[])
 	 * 2 -- ACTIVE READERS semaphore
 	 */
 	
+	int number_of_strings = atoi(argv[1]); // number of loops (cycles)
+	int interval_time = atoi(argv[2]); // interval time (as argument for "sleep()" function) for every loop (cycle)
 	int i = 0;
 	int active_processes_before_cleaning = 0; // if 0, the last active process delete semaphore and shared memory segment
 	int shared_mem_seg_ptr; // pointer to the shared memory segment
@@ -77,11 +99,11 @@ int main (int argc, char* argv[])
 	int key_semaphore = 695; // semaphore key
 	string filename = "shared_file.txt"; // name of the file to write strings
 	ofstream local_file;
-	SemaphoreBuffer DecOfMutForFile = {0, -1, 1}; // DEcreasing FILE semaphore
-	SemaphoreBuffer IncOfMutForFile = {0, 1, 1}; // INcreasing FILE semaphore
-	SemaphoreBuffer DecNumOfWriters = {1, -1, 1}; // DEcreasing ACTIVE WRITERS semaphore
-	SemaphoreBuffer IncNumOfWriters = {1, 1, 1}; // INcreasing ACTIVE WRITERS semaphore
-	SemaphoreBuffer ZeroNumOfReaders = {2, 0, 0}; // comparing ACTIVE READERS semaphore with 0
+	SemaphoreBuffer DecOfMutForFile = {0, -1, 0}; // DEcreasing FILE semaphore (flags = 0)
+	SemaphoreBuffer IncOfMutForFile = {0, 1, 0}; // INcreasing FILE semaphore (flags = 0)
+	SemaphoreBuffer DecNumOfWriters = {1, -1, 0}; // DEcreasing ACTIVE WRITERS semaphore (flags = 0)
+	SemaphoreBuffer IncNumOfWriters = {1, 1, 0}; // INcreasing ACTIVE WRITERS semaphore (flags = 0)
+	SemaphoreBuffer ZeroNumOfReaders = {2, 0, 0}; // comparing ACTIVE READERS semaphore with 0 (flags = 0)
 	SharedMemorySegmentBuffer* shared_mem_seg_this_process;
 	
 	cout << "---------- WRITER PROCESS NUMBER " << getpid() << " ----------\n";
@@ -158,7 +180,7 @@ int main (int argc, char* argv[])
 	
 	// ---------- WRITING FILE ----------
 	
-	for (i = 0; i < atoi(argv[1]); i++)
+	for (i = 0; i < number_of_strings; i++)
 	{
 		semop(semaphore_ptr, &IncNumOfWriters, 1); // +1 writer process, who wants to write into the file
 		semop(semaphore_ptr, &ZeroNumOfReaders, 1); // writer waits until reader will finish the reading
@@ -183,7 +205,7 @@ int main (int argc, char* argv[])
 		semop(semaphore_ptr, &DecNumOfWriters, 1); // decreasing number of active writers of file
 		cout << "---------- FILE & ACTIVE W/'S SEMAPHORE RELEASING BY W/ №" << getpid() << " END ----------\n\n";
 		
-		sleep(1);
+		sleep(interval_time); // sleeping before next iteration by the time passed in the argument
 	}
 	
 	// ---------- DECREASING SEMAPHORE NUMBER ----------
