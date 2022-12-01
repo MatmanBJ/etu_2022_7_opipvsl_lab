@@ -15,13 +15,6 @@ using namespace std;
 
 typedef struct sembuf SemaphoreBuffer;
 
-// shared struct (i.e. variable) for counting number of active processes,
-// who wants to have read/write operation with the same file
-typedef struct
-{
-	int process_number = 0; // number of working process, which connect to r/w
-} SharedMemorySegmentBuffer;
-
 int main (int argc, char* argv[])
 {
 	// ---------- INITIALIZING & PREPARING ----------
@@ -31,70 +24,40 @@ int main (int argc, char* argv[])
 	 * 0 -- FILE semaphore
 	 * 1 -- ACTIVE WRITERS semaphore
 	 * 2 -- ACTIVE READERS semaphore
+	 * 3 -- ACTIVE PROCESSES semaphore
 	 */
 	
-	int active_processes_before_cleaning = 0; // if 0, the last active process delete semaphore and shared memory segment
-	int shared_mem_seg_ptr; // pointer to the shared memory segment
 	int semaphore_ptr; // pointer to the semaphore
-	int key_shared_mem_seg = 160; // shared memory segment key
-	int key_semaphore = 695; // semaphore key
+	int key_semaphore = 190; // semaphore key
 	char local_buffer[80]; // buffer to read the file
 	string filename = "shared_file.txt"; // name of the file to read strings
 	ifstream local_file;
-	SemaphoreBuffer ZeroNumOfWriters = {1, 0, 0}; // comparing ACTIVE WRITERS semaphore with 0 (flags = 0)
-	SemaphoreBuffer DecNumOfReaders={2, -1, 0}; // DEcreasing ACTIVE READERS semaphore (flags = 0)
-	SemaphoreBuffer IncNumOfReaders={2, 1, 0}; // INcreasing ACTIVE READERS semaphore (flags = 0)
-	SharedMemorySegmentBuffer* shared_mem_seg_this_process;
+	SemaphoreBuffer semaphore_writers_compare = {1, 0, 0}; // comparing ACTIVE WRITERS semaphore with 0 (flags = 0)
+	SemaphoreBuffer semaphore_readers_decrease = {2, -1, 0}; // DEcreasing ACTIVE READERS semaphore (flags = 0)
+	SemaphoreBuffer semaphore_readers_increase = {2, 1, 0}; // INcreasing ACTIVE READERS semaphore (flags = 0)
+	SemaphoreBuffer semaphore_processes_decrease = {3, -1, 0}; // DEcreasing ACTIVE WRITERS semaphore (flags = 0)
+	SemaphoreBuffer semaphore_processes_increase = {3, 1, 0}; // INcreasing ACTIVE WRITERS semaphore (flags = 0)
 	
-	// ---------- CREATING/OPENING SHARED MEMORY SEGMENT ----------
-	
-	shared_mem_seg_ptr = shmget(key_shared_mem_seg, sizeof(SharedMemorySegmentBuffer), 0666 | IPC_CREAT | IPC_EXCL);
-	
-	// SHARED MEMORY SEGMENT is used for SHARED VARIABLE
-	// SHARED VARIABLE is used for counting ACTIVE PROCESSES,
-	// connected w/ this process or output file
-	if (shared_mem_seg_ptr != -1)
-	{
-		// we don't use bool variable to indicate owner, because memory will be freed by the last process
-		cout << "---------- SHARED MEMORY SEGMENT HAS BEEN CREATED ----------\n";
-	}
-	else
-	{
-		shared_mem_seg_ptr = shmget(key_shared_mem_seg, sizeof(SharedMemorySegmentBuffer), 0666 | IPC_CREAT);
-		if(shared_mem_seg_ptr == -1)
-		{
-			cout << "---------- SHARED MEMORY SEGMENT HAS NOT BEEN OPENED ----------\n";
-			exit(-1);
-		}
-		else
-		{
-			cout << "---------- SHARED MEMORY SEGMENT HAS BEEN OPENED ----------\n";
-		}
-	}
-	
-	// attaching means, that allocated shared memory segment
-	// now is not only allocated (and we can write something there),
-	// but now is the part of current process adress space,
-	// so we can use more memory in process
-	shared_mem_seg_this_process = (SharedMemorySegmentBuffer*)shmat(shared_mem_seg_ptr, 0, 0); // attach shared memory segment to the current process
+	cout << "---------- READER PROCESS NUMBER " << getpid() << " ----------\n";
+	cout << "---------- FILENAME TO READ IS " << filename << " ----------\n";
+	cout << "---------- SEMAPHORE KEY IS " << (key_semaphore == IPC_PRIVATE ? "IPC_PRIVATE = " + to_string(key_semaphore) : to_string(key_semaphore)) << " ----------\n";
 	
 	// ---------- CREATING/OPENING SEMAPHORES ----------
 	
 	// https://ru.manpages.org/semget/2
 	// int semget(key_t key, int nsems, int semflg);
-	semaphore_ptr = semget(key_semaphore, 3, IPC_CREAT | IPC_EXCL | 0666); // creating set of 3 semaphores (file, acrive writers, active readers)
+	semaphore_ptr = semget(key_semaphore, 4, IPC_CREAT | IPC_EXCL | 0666); // creating set of 4 semaphores (file, acrive writers, active readers, active processes)
 	
 	if (semaphore_ptr != -1)
 	{
-		cout << "---------- SEMAPHORE HAS BEEN CREATED BY PROCESS " << getpid() << " ----------\n";
-		shared_mem_seg_this_process->process_number = 0; // THIS SEMAPHORE NEEDS TO BE REPLASED THIS IS THE ONE WHO KNOCKS
+		cout << "---------- SEMAPHORE ID = " << semaphore_ptr << " HAS BEEN CREATED BY PROCESS " << getpid() << " ----------\n";
 	}	
 	else
 	{
-		semaphore_ptr = semget(key_semaphore, 3, IPC_CREAT); // opening semaphore
+		semaphore_ptr = semget(key_semaphore, 4, IPC_CREAT); // opening semaphore
 		if (semaphore_ptr != -1)
 		{
-			cout << "---------- SEMAPHORE HAS BEEN OPENED BY PROCESS " << getpid() << " ----------\n";
+			cout << "---------- SEMAPHORE ID = " << semaphore_ptr << " HAS BEEN OPENED BY PROCESS " << getpid() << " ----------\n";
 		}
 		else
 		{
@@ -103,14 +66,14 @@ int main (int argc, char* argv[])
 		}
 	}
 	
-	// ---------- INCREASING SEMAPHORE NUMBER ----------
+	// ---------- INCREASING PROCESSES SEMAPHORE NUMBER ----------
 	
-	// increase number of working processes, because we have access
-	// increasing number in shared variable, so other programs will know,
-	// how many programs have access to this process (memory) at the moment
-	shared_mem_seg_this_process->process_number = shared_mem_seg_this_process->process_number + 1;
+	// increase number of working processes,
+	// because we started working w/ file, so other programs will know,
+	// how many programs are active (i.e. not finished working w/ file part)
+	semop(semaphore_ptr, &semaphore_processes_increase, 1);
 	
-	cout << "---------- NUMBER OF PROCESSES, CONNECTED TO R/W FILE IS " << shared_mem_seg_this_process->process_number << " ----------\n\n";
+	cout << "---------- NUMBER OF PROCESSES, CONNECTED TO R/W FILE IS " << semctl(semaphore_ptr, 3, GETVAL, 0) << " ----------\n\n";
 	
 	// ---------- READING FILE ----------
 	
@@ -118,9 +81,9 @@ int main (int argc, char* argv[])
 	// if there IS writers, who are ready to write, other readers will wait access to the file
 	
 	cout << "---------- R/ PROCESS №" << getpid() << " IS WAITING FOR THE READY W/ PROCS ----------\n";
-	semop(semaphore_ptr, &ZeroNumOfWriters, 1); // reader waits until writer will finish the reading
 	
-	semop(semaphore_ptr, &IncNumOfReaders, 1);// +1 writer process, who wants to read from the file
+	semop(semaphore_ptr, &semaphore_writers_compare, 1); // reader waits until writer will finish the reading
+	semop(semaphore_ptr, &semaphore_readers_increase, 1);// +1 writer process, who wants to read from the file
 	
 	cout << "---------- OPEN FILE \"" << filename << "\" TO R/ BY PROCESS №" << getpid() << " BEGIN ----------\n";
 	local_file.open(filename);
@@ -138,36 +101,22 @@ int main (int argc, char* argv[])
 	local_file.close();
 	cout << "---------- CLOSE FILE \"" << filename << "\" TO R/ BY PROCESS №" << getpid() << " END ----------\n\n";
 	
-	semop(semaphore_ptr, &DecNumOfReaders, 1); // decreasing number of active readers of file
+	semop(semaphore_ptr, &semaphore_readers_decrease, 1); // decreasing number of active readers of file
 	
-	// ---------- DECREASING SEMAPHORE NUMBER ----------
+	// ---------- DECREASING PROCESSES SEMAPHORE NUMBER ----------
 	
-	// decrease number of working processes, because we will lose access
-	// decreasing number in shared variable, so other programs will know,
-	// how many programs have access to this process (memory) at the moment
-	shared_mem_seg_this_process->process_number = shared_mem_seg_this_process->process_number - 1;
-	
-	// fix number of processes from shared variable
-	// so the last, who have 0 processes,
-	// will delete semaphore
-	// and will delete (free) shared memory segment
-	active_processes_before_cleaning = shared_mem_seg_this_process->process_number;
-	
-	// ---------- SHARED MEMORY SEGMENT DETACH FROM THE PROGRAM MEMORY ----------
-	
-	// detaching means, that allocated shared memory segment
-	// now is NOT the part of CURRENT process adress space,
-	// but allocated, and we can write sometning there,
-	// and if we want, we can attach it to THIS process again
-	shmdt((void*)shared_mem_seg_this_process); // detach shared memory segment from current process
+	// decrease number of working processes, because we finished shared file part
+	// decreasing number in the semaphore number 4, so other programs will know,
+	// how many programs are active (i.e. not finished working w/ file part)
+	semop(semaphore_ptr, &semaphore_processes_decrease, 1);
 	
 	// ---------- CLEANING & TERMINATING ----------
 	
-	// last process will delete semaphore and will free the shared memory segment
-	if(active_processes_before_cleaning == 0)
+	// so the last process, who see 0 in semaphore,
+	// will delete semaphore and shared memory segment
+	if (semctl(semaphore_ptr, 3, GETVAL, 0) == 0) // last process will delete semaphore and will free the shared memory segment
 	{
 		semctl(semaphore_ptr, IPC_RMID, 0); // deleting semaphore
-		shmctl(shared_mem_seg_ptr, IPC_RMID, 0); // delete (free) shared memory segment
 		cout << "---------- SEMAPHORE HAS BEED DELETED ----------\n";
 	}
 	
