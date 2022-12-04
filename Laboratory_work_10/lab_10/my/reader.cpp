@@ -32,11 +32,12 @@ int main (int argc, char* argv[])
 	char local_buffer[80]; // buffer to read the file
 	string filename = "shared_file.txt"; // name of the file to read strings
 	ifstream local_file;
+	SemaphoreBuffer semaphore_file_increase = {0, 1, 0}; // INcreasing ACCESS FOR ONLY 1 WRITER to FILE semaphore (flags = 0)
 	SemaphoreBuffer semaphore_writers_compare = {1, 0, 0}; // comparing ACTIVE WRITERS semaphore with 0 (flags = 0)
 	SemaphoreBuffer semaphore_readers_decrease = {2, -1, 0}; // DEcreasing ACTIVE READERS semaphore (flags = 0)
 	SemaphoreBuffer semaphore_readers_increase = {2, 1, 0}; // INcreasing ACTIVE READERS semaphore (flags = 0)
-	SemaphoreBuffer semaphore_processes_decrease = {3, -1, 0}; // DEcreasing ACTIVE WRITERS semaphore (flags = 0)
-	SemaphoreBuffer semaphore_processes_increase = {3, 1, 0}; // INcreasing ACTIVE WRITERS semaphore (flags = 0)
+	SemaphoreBuffer semaphore_processes_decrease = {3, -1, 0}; // DEcreasing ACTIVE PROCESSES semaphore (flags = 0)
+	SemaphoreBuffer semaphore_processes_increase = {3, 1, 0}; // INcreasing ACTIVE PROCESSES semaphore (flags = 0)
 	
 	cout << "---------- READER PROCESS NUMBER " << getpid() << " ----------\n";
 	cout << "---------- FILENAME TO READ IS " << filename << " ----------\n";
@@ -51,6 +52,13 @@ int main (int argc, char* argv[])
 	if (semaphore_ptr != -1)
 	{
 		cout << "---------- SEMAPHORE ID = " << semaphore_ptr << " HAS BEEN CREATED BY PROCESS " << getpid() << " ----------\n";
+		// when we create the semaphore, increasing it +1
+		// this semaphore is only for writers: for tracking the possibility of writig in the file at the moment
+		// when we enter the cycle (the loop), we dectreasing it -1, so it will be =0 (because we had +1 ONLY when created),
+		// so the other ones (the other writers) can't make -1, when they reach the same point in the cycle,
+		// because there is no IPC_NOWAIT flag, which returns error immediately, so other programs-writers MUST wait untill it will be +1,
+		// so they could make -1 (when =0, they couldn't do that, because there couldn't be <0 in semaphore)
+		semop(semaphore_ptr, &semaphore_file_increase, 1);
 	}	
 	else
 	{
@@ -77,13 +85,17 @@ int main (int argc, char* argv[])
 	
 	// ---------- READING FILE ----------
 	
-	// if there is NO writers, who are ready to write, readers could access file together
-	// if there IS writers, who are ready to write, other readers will wait access to the file
+	// here we are waiting only writers, but we aren't tracking other readers
+	// (as it was for writers w/ semaphore, where it increasing +1 in the creation part),
+	// because reading operation (instead of writing) doesn't require that
+	// so we have situation, where if NO writers -- ALL readers read,
+	// but if there IS writer -- ONLY 1 reader reads
+	// it's because in this situation there is a queue of processes, where (most probably) writer will be next, not reader
 	
 	cout << "---------- R/ PROCESS №" << getpid() << " IS WAITING FOR THE READY W/ PROCS ----------\n";
 	
 	semop(semaphore_ptr, &semaphore_writers_compare, 1); // reader waits until writer will finish the reading
-	semop(semaphore_ptr, &semaphore_readers_increase, 1);// +1 writer process, who wants to read from the file
+	semop(semaphore_ptr, &semaphore_readers_increase, 1); // +1 writer process, who wants to read from the file
 	
 	cout << "---------- OPEN FILE \"" << filename << "\" TO R/ BY PROCESS №" << getpid() << " BEGIN ----------\n";
 	local_file.open(filename);

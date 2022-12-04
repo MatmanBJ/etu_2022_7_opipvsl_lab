@@ -98,13 +98,13 @@ int main (int argc, char* argv[])
 	int key_semaphore = 190; // semaphore key
 	string filename = "shared_file.txt"; // name of the file to write strings
 	ofstream local_file;
-	SemaphoreBuffer semaphore_file_decrease = {0, -1, 0}; // DEcreasing FILE semaphore (flags = 0)
-	SemaphoreBuffer semaphore_file_increase = {0, 1, 0}; // INcreasing FILE semaphore (flags = 0)
+	SemaphoreBuffer semaphore_file_decrease = {0, -1, 0}; // DEcreasing ACCESS FOR ONLY 1 WRITER to FILE semaphore (flags = 0)
+	SemaphoreBuffer semaphore_file_increase = {0, 1, 0}; // INcreasing ACCESS FOR ONLY 1 WRITER to FILE semaphore (flags = 0)
 	SemaphoreBuffer semaphore_writers_decrease = {1, -1, 0}; // DEcreasing ACTIVE WRITERS semaphore (flags = 0)
 	SemaphoreBuffer semaphore_writers_increase = {1, 1, 0}; // INcreasing ACTIVE WRITERS semaphore (flags = 0)
 	SemaphoreBuffer semaphore_readers_compare = {2, 0, 0}; // comparing ACTIVE READERS semaphore with 0 (flags = 0)
-	SemaphoreBuffer semaphore_processes_decrease = {3, -1, 0}; // DEcreasing ACTIVE WRITERS semaphore (flags = 0)
-	SemaphoreBuffer semaphore_processes_increase = {3, 1, 0}; // INcreasing ACTIVE WRITERS semaphore (flags = 0)
+	SemaphoreBuffer semaphore_processes_decrease = {3, -1, 0}; // DEcreasing ACTIVE PROCESSES semaphore (flags = 0)
+	SemaphoreBuffer semaphore_processes_increase = {3, 1, 0}; // INcreasing ACTIVE PROCESSES semaphore (flags = 0)
 	
 	cout << "---------- WRITER PROCESS NUMBER " << getpid() << " ----------\n";
 	cout << "---------- FILENAME TO WRITE IS " << filename << " ----------\n";
@@ -119,7 +119,13 @@ int main (int argc, char* argv[])
 	if (semaphore_ptr != -1)
 	{
 		cout << "---------- SEMAPHORE ID = " << semaphore_ptr << " HAS BEEN CREATED BY PROCESS " << getpid() << " ----------\n";
-		semop(semaphore_ptr, &semaphore_file_increase, 1); // get access to the file
+		// when we create the semaphore, increasing it +1
+		// this semaphore is only for writers: for tracking the possibility of writig in the file at the moment
+		// when we enter the cycle (the loop), we dectreasing it -1, so it will be =0 (because we had +1 ONLY when created),
+		// so the other ones (the other writers) can't make -1, when they reach the same point in the cycle,
+		// because there is no IPC_NOWAIT flag, which returns error immediately, so other programs-writers MUST wait untill it will be +1,
+		// so they could make -1 (when =0, they couldn't do that, because there couldn't be <0 in semaphore)
+		semop(semaphore_ptr, &semaphore_file_increase, 1);
 	}	
 	else
 	{
@@ -152,7 +158,8 @@ int main (int argc, char* argv[])
 		semop(semaphore_ptr, &semaphore_readers_compare, 1); // writer waits until reader will finish the reading
 		
 		cout << "---------- W/ PROCESS №" << getpid() << " IS WAITING FOR THE FILE SEMAPHORE ----------\n";
-		semop(semaphore_ptr, &semaphore_file_decrease, 1); // writer process waiting to get the access to the file
+		// [see the semaphore creation part, i've made more detailed explanations]
+		semop(semaphore_ptr, &semaphore_file_decrease, 1); // decrease, so other processes-WRITERs waiting to get the access to the file
 		
 		cout << "---------- OPEN FILE \"" << filename << "\" TO W/ BY PROCESS №" << getpid() << " BEGIN ----------\n";
 		local_file.open(filename, ios::app);
@@ -168,7 +175,8 @@ int main (int argc, char* argv[])
 		cout << "---------- CLOSE FILE \"" << filename << "\" TO W/ BY PROCESS №" << getpid() << " END ----------\n";
 		
 		cout << "---------- FILE & ACTIVE W/'S SEMAPHORE RELEASING BY W/ №" << getpid() << " BEGIN ----------\n";
-		semop(semaphore_ptr, &semaphore_file_increase, 1); // freeing the file holding by this process
+		// [see the semaphore creation part, i've made more detailed explanations]
+		semop(semaphore_ptr, &semaphore_file_increase, 1); // freeing the file holding by this process-WRITER
 		semop(semaphore_ptr, &semaphore_writers_decrease, 1); // decreasing number of active writers of file
 		cout << "---------- FILE & ACTIVE W/'S SEMAPHORE RELEASING BY W/ №" << getpid() << " END ----------\n\n";
 		
