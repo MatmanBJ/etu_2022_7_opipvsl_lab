@@ -1,10 +1,18 @@
+/*
+ * not for launch from terminal
+ * launches, when forks from main server
+ */
+
 #include <iostream>
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <unistd.h>
 #include <algorithm>
+#include <ctime>
 
 using namespace std;
+
+typedef struct timeval TimeValue;
 
 int main(int argc, char* argv[])
 {
@@ -21,17 +29,15 @@ int main(int argc, char* argv[])
 	// after that we sending it back (we recieved as ARGUMENT a client's address,
 	// where the message was from and where we need to send it after treatment)
 	
+	TimeValue time_value;
+	time_value.tv_sec = 5;
+	time_value.tv_usec = 0;
+	setsockopt(local_socket_fd, SOL_SOCKET, SO_RCVTIMEO, (const char*)&time_value, sizeof(time_value)); // setting a parameters for socket-reciever
+	
 	/*
-	https://www.opennet.ru/man.shtml?topic=recv&category=2&russian=0
 	https://man7.org/linux/man-pages/man2/recv.2.html
-	#include <sys/socket.h>
 	ssize_t recv(int sockfd, void *buf, size_t len, int flags)
-	sockfd -- socket file descriptor (???)
-	buf -- placing the received message into the buffer variabl buf
-	len -- the size of the buffer in len
-	flags -- flags
-	purpose: receive a message from a socket
-	return: the number of bytes received, or -1 if an error occurred, errno is set to indicate the error
+	recieves a message (writes in buffer) from socket w/ concrete length (size), return the number of bytes recieved if success, -1 if error
 	*/
 	local_buffer_length = recv(local_socket_fd, local_consequence_buffer, 10, 0); // message recieving
 	cout << "---------- MESSAGE HAS BEEN RECIEVED ----------\n"
@@ -59,39 +65,28 @@ int main(int argc, char* argv[])
 	}
 	
 	/*
-	https://www.opennet.ru/man.shtml?topic=send&category=2&russian=0
 	https://man7.org/linux/man-pages/man2/send.2.html
-	#include <sys/socket.h>
 	ssize_t send(int sockfd, const void *buf, size_t len, int flags)
-	sockfd -- the file descriptor of the sending socket
-	buf -- the message is found in buf and has length len
-	len -- the message is found in buf and has length len
-	flags -- flags
-	purpose: send a message on a socket
-	return: on success, return the number of bytes sent; on error, -1 is returned, and errno is set to indicate the error
+	send message (located in buffer) on a socket w/ concrete legnth (size), return the number of bytes sent if success, -1 if error
 	*/
 	if (send(local_socket_fd, local_consequence_buffer, local_buffer_length, 0) > 0)
 	{
 		cout << "---------- MESSAGE HAS BEEN SENDED ----------\n"
 		<< "---------- BEGIN MESSAGE ----------\n"
 		<< local_consequence_buffer << "\n" // output treated message from client to server to subserver (this) to client
-		<< "---------- END MESSAGE ----------\n";
+		<< "---------- END MESSAGE ----------\n\n";
 	}
 	else
 	{
-		cout << "---------- MESSAGE SENDING TO CLIENT ERROR ----------\n";
+		cout << "---------- MESSAGE SENDING TO CLIENT ERROR ----------\n\n";
 	}
 	
 	// ---------- CLEANING & TERMINATING ----------
 	
 	/*
-	https://www.opennet.ru/man.shtml?topic=close&category=3&russian=5
 	https://man7.org/linux/man-pages/man2/close.2.html
-	#include <unistd.h>
 	int close(int fd)
-	fd -- file descriptor
-	purpose: close a file descriptor
-	return: returns zero on success, on error, -1 is returned, and errno is set to indicate the error
+	closing a file descriptor of the socket, return 0 if success, -1 if error
 	*/
 	close(local_socket_fd);
 	exit(0);
